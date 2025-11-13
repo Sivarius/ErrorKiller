@@ -607,15 +607,17 @@ goto auditoria_restart
 
 :errossistema
 cls
-echo [*] Latest system errors:
+echo [*] Latest Critical/Error events from System log:
 echo ----------------------------------
-wevtutil qe System /c:5 /f:text | findstr /i /C:"error" /C:"fail" /C:"critical"
+wevtutil qe System /q:"*[System[(Level=1 or Level=2)]]" /c:10 /f:text /rd:true
 echo ----------------------------------
 pause
 goto auditoria_restart
 
 :eventos_seguranca
-eventvwr /c:Security /f:"*[System[(Level=1 or Level=2)]]" /l:30
+cls
+echo [*] Latest Security log entries (last 30):
+wevtutil qe Security /c:30 /f:text /rd:true
 pause
 goto auditoria_restart
 
