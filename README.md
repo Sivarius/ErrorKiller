@@ -1,42 +1,59 @@
-# ErrorKiller — English Fork
+# ErrorKiller — русская локализация
 
-This repository is a fork of the original ErrorKiller tool with a full English localization. The tool is a Windows support utility implemented as a single Batch (BAT) script to automate maintenance, diagnostics, and repair tasks.
+Этот репозиторий содержит локализованную на русский язык утилиту поддержки Windows, реализованную одним BAT-скриптом. Инструмент автоматизирует обслуживание, диагностику и ремонт типичных проблем системы.
 
-- Original script (Portuguese): `SuporteTecnico.bat`
-- English-localized script: `ErrorKiller_EN.bat`
+- Оригинальный скрипт (португальский): `SuporteTecnico.bat`
+- Русская версия: `ErrorKiller_RU.bat`
 
-## Key Features
+## Основные возможности
 
-- Print troubleshooting
-  - Fixes common Windows printing errors: 0x0000011b (RPC), 0x00000bcb (drivers), 0x00000709 (NamedPipe)
-  - Restart Print Spooler or apply all fixes at once
-- Windows repair
-  - System File Checker: `sfc /scannow`
-  - DISM image repair: `DISM /Online /Cleanup-Image /RestoreHealth`
-  - Disk integrity check: `chkdsk /scan`
-- Security and privacy
-  - Open Windows Update and Firewall settings
-  - Quick security audit (updates, firewall profiles, security services, PowerShell execution policies)
-  - Clear activity traces and telemetry caches; stop tracking services
-- Network tools
-  - DNS flush/register, network reset (Winsock/IP), full network report saved to a temp file and opened in Notepad
-- Full diagnostics suite
-  - Run individual or all checks: SFC, DISM, CHKDSK, temp cleanup, Windows Update (via PSWindowsUpdate), network checks, driver verification
-- System tweaks
-  - Power optimization (High performance scheme and no sleep timeouts)
-  - Disable unnecessary apps/services and telemetry-related features via registry and service config
-- System audit
-  - Recent system errors, security events, performance report, problematic drivers
-- Registry backup
-  - Export HKLM/HKCU/HKCR hives into `C:\RegBackup_YYYYMMDD`
-- Advanced process monitor
-  - List processes/services, show active connections, kill by PID
+- Печать
+  - Исправление распространенных ошибок печати Windows: 0x0000011b (RPC), 0x00000bcb (драйверы), 0x00000709 (NamedPipe)
+  - Перезапуск службы Диспетчер печати или применение всех исправлений разом
+- Восстановление Windows
+  - Проверка системных файлов: `sfc /scannow`
+  - Восстановление образа: `DISM /Online /Cleanup-Image /RestoreHealth`
+  - Проверка целостности диска: `chkdsk /scan`
+- Безопасность и приватность
+  - Открытие настроек Windows Update и Брандмауэра
+  - Быстрый аудит безопасности (обновления, профили брандмауэра, службы безопасности, политики выполнения PowerShell)
+  - Очистка следов активности и телеметрии; остановка связанных служб
+- Сеть
+  - Очистка/регистрация DNS, сброс сети (Winsock/IP), полный сетевой отчет в файл и автo-открытие в Notepad
+- Полная диагностика
+  - Запуск отдельных или всех проверок: SFC, DISM, CHKDSK, очистка TEMP, Windows Update (PSWindowsUpdate), сетевые проверки, проверка драйверов
+- Настройки системы
+  - Оптимизация питания (высокая производительность и отсутствие тайм-аутов сна)
+  - Отключение ненужных приложений/служб и функций телеметрии (реестр и конфигурация служб)
+- Аудит системы
+  - Последние системные ошибки, события безопасности, отчёт производительности, проблемные драйверы
+- Резервное копирование реестра
+  - Экспорт ветвей HKLM/HKCU/HKCR в `C:\RegBackup_YYYYMMDD`
+- Расширенный монитор процессов
+  - Списки процессов/служб, активные соединения, завершение по PID
 
-## Usage
+## Запуск
 
-Run from an elevated terminal for features that require admin rights (registry changes, DISM/SFC, services):
+Большинство функций требуют прав администратора (изменение реестра, DISM/SFC, управление службами). Рекомендуется запускать из повышенного PowerShell в корне репозитория.
 
-- Start (PowerShell, elevated):
-  - `Start-Process -Verb RunAs -FilePath cmd.exe -ArgumentList '/k cd /d Z:\git\ErrorKiller && ErrorKiller_EN.bat'`
-- View latest log (stored under `%TEMP%/error_killer_YYYYMMDD.txt`):
-  - `Get-ChildItem "$env:TEMP" -Filter 'error_killer_*.txt' | Sort-Object LastWriteTime -Desc | Select-Object -First 1 | Get-Content -Tail 100`
+- Запуск русской версии (PowerShell, от имени администратора):
+
+  ```powershell path=null start=null
+  Start-Process -Verb RunAs -FilePath cmd.exe -ArgumentList '/k ErrorKiller_RU.bat' -WorkingDirectory $PWD
+  ```
+
+- Альтернативно (без повышения; часть функций может не сработать):
+
+  ```powershell path=null start=null
+  cmd /k .\ErrorKiller_RU.bat
+  ```
+
+- Просмотр последнего лога (`%TEMP%/error_killer_YYYYMMDD.txt`):
+
+  ```powershell path=null start=null
+  Get-ChildItem $env:TEMP -Filter 'error_killer_*.txt' |
+    Sort-Object LastWriteTime -Desc |
+    Select-Object -First 1 |
+    Get-Content -Tail 100
+  ```
+
