@@ -331,15 +331,16 @@ cls
 echo [*] COLLECTING NETWORK INFORMATION...
 echo Please wait while a complete report is prepared...
 
-:: Generate temporary file with all information
-ipconfig /all > "%TEMP%\network_info.txt"
-arp -a >> "%TEMP%\network_info.txt"
-echo. >> "%TEMP%\network_info.txt"
-echo === ROUTES === >> "%TEMP%\network_info.txt"
-route print >> "%TEMP%\network_info.txt"
+set "OUTPUT=%~dp0Network_Report.txt"
+powershell -NoProfile -Command "cmd /c ipconfig /all | Out-File -FilePath '%OUTPUT%' -Encoding UTF8"
+powershell -NoProfile -Command "cmd /c arp -a | Out-File -FilePath '%OUTPUT%' -Encoding UTF8 -Append"
+powershell -NoProfile -Command "Add-Content -Path '%OUTPUT%' -Value ''"
+powershell -NoProfile -Command "Add-Content -Path '%OUTPUT%' -Value '=== ROUTES ==='"
+powershell -NoProfile -Command "cmd /c route print | Out-File -FilePath '%OUTPUT%' -Encoding UTF8 -Append"
 
-:: Open in Notepad
-start notepad "%TEMP%\network_info.txt"
+start notepad "%OUTPUT%"
+echo Saved to: %OUTPUT%
+pause
 goto menu
 
 :impressoras
@@ -607,17 +608,21 @@ goto auditoria_restart
 
 :errossistema
 cls
-echo [*] Latest Critical/Error events from System log:
-echo ----------------------------------
-wevtutil qe System /q:"*[System[(Level=1 or Level=2)]]" /c:10 /f:text /rd:true
-echo ----------------------------------
+echo [*] Exporting Critical/Error events from System log to file...
+set "OUTPUT=%~dp0System_Log.txt"
+powershell -NoProfile -Command "wevtutil qe System /q:'*[System[(Level=1 or Level=2)]]' /c:200 /f:text /rd:true | Out-File -FilePath '%OUTPUT%' -Encoding UTF8"
+echo Saved to: %OUTPUT%
+start notepad "%OUTPUT%"
 pause
 goto auditoria_restart
 
 :eventos_seguranca
 cls
-echo [*] Latest Security log entries (last 30):
-wevtutil qe Security /c:30 /f:text /rd:true
+echo [*] Exporting latest Security log entries to file...
+set "OUTPUT=%~dp0Security_Log.txt"
+powershell -NoProfile -Command "wevtutil qe Security /c:200 /f:text /rd:true | Out-File -FilePath '%OUTPUT%' -Encoding UTF8"
+echo Saved to: %OUTPUT%
+start notepad "%OUTPUT%"
 pause
 goto auditoria_restart
 
