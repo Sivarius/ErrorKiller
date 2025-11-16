@@ -5,6 +5,14 @@ color 0
 mode con: cols=120 lines=3000
 title   ERROR KILLER - утилита устранения ошибок
 
+:: ================= ПРОВЕРКА ПРАВ АДМИНИСТРАТОРА =================
+net session >nul 2>&1
+if not "%errorlevel%"=="0" (
+  echo Перезапустите от имени администратора
+  timeout /t 3 >nul
+  exit /b
+)
+
 :: ================= НАЧАЛЬНАЯ КОНФИГУРАЦИЯ =================
 set LOGFILE=%TEMP%\error_killer_%date:~-4,4%%date:~-7,2%%date:~-10,2%.txt
 call :log "Сеанс запущен: %date% %time%"
