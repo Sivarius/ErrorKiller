@@ -2,7 +2,7 @@
 setlocal enabledelayedexpansion
 chcp 65001 >nul
 color 0
-mode con cols=100 lines=40
+mode con: cols=120 lines=3000
 title   ERROR KILLER - утилита устранения ошибок
 
 :: ================= НАЧАЛЬНАЯ КОНФИГУРАЦИЯ =================
@@ -30,6 +30,7 @@ echo  [11] Полная диагностика            - Комплексна
 echo  [12] Оптимизация питания           - Режим производительности
 echo  [13] Отключение приложений         - Ненужные приложения/службы
 echo  [14] Аудит системы                 - Всесторонний анализ
+echo  [15] Работа с 1С                     - Очистка кэша
 echo.
 echo  [S]  Системные настройки           - Дополнительные утилиты
 echo  [0]  Выход
@@ -51,6 +52,7 @@ if /i "%opcao%"=="11" goto diagnostico
 if /i "%opcao%"=="12" goto energia
 if /i "%opcao%"=="13" goto desativarapps
 if /i "%opcao%"=="14" goto auditoria
+if /i "%opcao%"=="15" goto onec
 if /i "%opcao%"=="S" goto configuracoes
 if /i "%opcao%"=="0" goto fim
 
@@ -83,6 +85,9 @@ echo.
 echo  [5] Применить все исправления
 echo       - Выполнить все исправления выше
 echo.
+echo  [6] Очистка очереди печати
+echo       - Очистить папку очереди и перезапустить службы
+echo.
 echo  [0] Назад в главное меню
 echo  ==================================
 echo.
@@ -93,6 +98,7 @@ if "%escolha%"=="2" goto erro0bcb
 if "%escolha%"=="3" goto erro709
 if "%escolha%"=="4" goto reiniciar_spooler
 if "%escolha%"=="5" goto todos_reparos_impressao
+if "%escolha%"=="6" goto limpar_fila_impressao
 if "%escolha%"=="0" goto menu
 goto correcao_impressao_restart
 
@@ -104,27 +110,50 @@ call :log "Перезапущен Print Spooler"
 pause
 goto correcao_impressao_restart
 
+:limpar_fila_impressao
+net stop "LPDSVC"
+net stop "spooler"
+TIMEOUT /T 2
+rmdir /S /Q "C:\Windows\System32\spool\PRINTERS"
+TIMEOUT /T 1
+net start "spooler"
+net start "LPDSVC"
+echo Очередь печати очищена!
+call :log "Очищена очередь печати"
+pause
+goto correcao_impressao_restart
+
 :todos_reparos_impressao
 cls
 echo [*] ПРИМЕНЕНИЕ ВСЕХ ИСПРАВЛЕНИЙ ПЕЧАТИ...
 echo.
 
-echo [1/4] Исправление ошибки 0x0000011b (RPC)...
+echo [1/5] Исправление ошибки 0x0000011b (RPC)...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Print" /v RpcAuthnLevelPrivacyEnabled /t REG_DWORD /d 0 /f >nul
 echo [+] Ошибка 0x0000011b исправлена!
 timeout /t 1 >nul
 
-echo [2/4] Исправление ошибки 0x00000bcb (Драйверы)...
+echo [2/5] Исправление ошибки 0x00000bcb (Драйверы)...
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows NT\Printers\PointAndPrint" /v RestrictDriverInstallationToAdministrators /t REG_DWORD /d 0 /f >nul
 echo [+] Ошибка 0x00000bcb исправлена!
 timeout /t 1 >nul
 
-echo [3/4] Исправление ошибки 0x00000709 (NamedPipe)...
+echo [3/5] Исправление ошибки 0x00000709 (NamedPipe)...
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows NT\Printers\RPC" /v RpcUseNamedPipeProtocol /t REG_DWORD /d 1 /f >nul
 echo [+] Ошибка 0x00000709 исправлена!
 timeout /t 1 >nul
 
-echo [4/4] Перезапуск Диспетчера печати...
+echo [4/5] Очистка очереди печати...
+net stop "LPDSVC" >nul 2>&1
+net stop "spooler" >nul 2>&1
+TIMEOUT /T 2 >nul
+rmdir /S /Q "C:\Windows\System32\spool\PRINTERS"
+TIMEOUT /T 1 >nul
+net start "spooler" >nul 2>&1
+net start "LPDSVC" >nul 2>&1
+echo [+] Очередь печати очищена!
+
+echo [5/5] Перезапуск Диспетчера печати...
 net stop spooler /y >nul
 net start spooler >nul
 echo [+] Диспетчер печати перезапущен!
@@ -263,11 +292,11 @@ if "%escolha%"=="3" (
     echo.
     
     echo [1/4] Проверка установленных обновлений...
-    wmic qfe list brief /format:list
+    wmic qfe list brief /format:list | more
     echo.
     
     echo [2/4] Проверка состояния брандмауэра...
-    netsh advfirewall show allprofiles
+    netsh advfirewall show allprofiles | more
     echo.
     
     echo [3/4] Проверка служб безопасности...
@@ -458,7 +487,7 @@ goto diagnostico_restart
 :diag_rede
 cls
 echo [*] ПОЛНЫЙ АНАЛИЗ СЕТИ...
-ipconfig /all
+    ipconfig /all | more
 netsh winsock reset
 ipconfig /flushdns
 call :log "Выполнена диагностика сети"
@@ -505,7 +534,7 @@ call :log "Обновления обработаны"
 pause
 
 echo [6/7] Сеть...
-ipconfig /all
+ipconfig /all | more
 netsh winsock reset
 ipconfig /flushdns
 call :log "Диагностика сети"
@@ -521,6 +550,65 @@ echo [*] ВСЕ ПРОВЕРКИ ЗАВЕРШЕНЫ!
 call :log "Полная диагностика завершена"
 pause
 goto diagnostico_restart
+
+:: ================== РАБОТА С 1С ==================
+:onec
+:onec_restart
+cls
+echo.
+echo  ==================================
+echo  [ РАБОТА С 1С ]
+echo  ==================================
+echo.
+echo  [1] Очистка локального кэша пользователей
+echo       - Удаляет локальный кэш 1Cv8/1Cv82 в LocalAppData для всех пользователей
+echo.
+echo  [2] Глубокая очистка кэша (ОСТОРОЖНО!!!)
+echo       - Удаляет локальный и роуминговый кэш 1Cv8/1Cv82
+echo         (будут затронуты настройки рабочего места и привязка оборудования)
+echo.
+echo  [0] Назад в главное меню
+echo  ==================================
+echo.
+set /p escolha1C= Выберите действие: 
+
+if "%escolha1C%"=="1" goto onec_cache_local
+if "%escolha1C%"=="2" goto onec_cache_deep
+if "%escolha1C%"=="0" goto menu
+goto onec_restart
+
+:onec_cache_local
+call :set_users "%USERPROFILE%"
+FOR /D %%i in ("%Users%*") do (
+  FOR /D %%j in ("%%i\AppData\Local\1C\1Cv82\????????-????-????-????-????????????") do rd /s /q "%%j"
+  FOR /D %%j in ("%%i\AppData\Local\1C\1Cv8\????????-????-????-????-????????????") do rd /s /q "%%j"
+)
+echo [+] Локальный кэш 1С очищен.
+call :log "1C: локальный кэш очищен"
+timeout /t 5 >nul
+goto onec_restart
+
+:onec_cache_deep
+cls
+echo [ВНИМАНИЕ] Глубокая очистка кэша 1С!
+echo Это затронет настройки рабочего места и привязку оборудования.
+set /p confirm= Продолжить? (Введите ДА для подтверждения): 
+if /I not "%confirm%"=="ДА" (
+  echo Отменено пользователем.
+  timeout /t 2 >nul
+  goto onec_restart
+)
+call :set_users "%USERPROFILE%"
+FOR /D %%i in ("%Users%*") do (
+  FOR /D %%j in ("%%i\AppData\Local\1C\1Cv82\????????-????-????-????-????????????") do rd /s /q "%%j"
+  FOR /D %%j in ("%%i\AppData\Roaming\1C\1Cv82\????????-????-????-????-????????????") do rd /s /q "%%j"
+  FOR /D %%j in ("%%i\AppData\Local\1C\1Cv8\????????-????-????-????-????????????") do rd /s /q "%%j"
+  FOR /D %%j in ("%%i\AppData\Roaming\1C\1Cv8\????????-????-????-????-????????????") do rd /s /q "%%j"
+)
+echo [+] Глубокая очистка кэша 1С выполнена.
+call :log "1C: глубокая очистка кэша выполнена"
+timeout /t 5 >nul
+goto onec_restart
 
 :: ================== ПРОЧЕЕ ==================
 :energia
@@ -721,25 +809,25 @@ echo.
 set /p escolha= Выберите вариант: 
 
 if "%escolha%"=="1" (
-    tasklist
+    tasklist | more
     call :log "Выведен список процессов"
     pause
     goto processos_restart
 )
 if "%escolha%"=="2" (
-    tasklist
+    tasklist | more
     call :log "Выведен список процессов"
     pause
     goto processos_restart
 )
 if "%escolha%"=="3" (
-    netstat -ano | findstr "ESTABLISHED"
+    netstat -ano | findstr "ESTABLISHED" | more
     call :log "Показаны сетевые процессы"
     pause
     goto processos_restart
 )
 if "%escolha%"=="4" (
-    tasklist /svc
+    tasklist /svc | more
     call :log "Показаны службы"
     pause
     goto processos_restart
@@ -773,6 +861,10 @@ echo Очистка: C:\Windows\SoftwareDistribution\Download
 del /f /s /q "%SystemRoot%\SoftwareDistribution\Download\*" >nul 2>&1
 echo Очистка: C:\$Windows.~BT
 del /f /s /q "C:\$Windows.~BT\*" >nul 2>&1
+goto :eof
+
+:set_users
+set "Users=%~dp1"
 goto :eof
 
 :log
