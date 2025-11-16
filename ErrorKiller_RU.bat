@@ -16,7 +16,7 @@ echo  ================================================================
 echo                   ERROR KILLER - ГЛАВНОЕ МЕНЮ
 echo  ================================================================
 echo.
-echo  [1]  Перезагрузка системы          - Принудительный рестарт
+echo  [1]  Работа с 1С                   - Очистка кэша
 echo  [2]  Очистка DNS                   - Сброс кэша DNS
 echo  [3]  Диагностика сети              - Полный комплекс
 echo  [4]  Исправление печати            - Устранение ошибок
@@ -30,15 +30,15 @@ echo  [11] Полная диагностика            - Комплексна
 echo  [12] Оптимизация питания           - Режим производительности
 echo  [13] Отключение приложений         - Ненужные приложения/службы
 echo  [14] Аудит системы                 - Всесторонний анализ
-echo  [15] Работа с 1С                     - Очистка кэша
 echo.
 echo  [S]  Системные настройки           - Дополнительные утилиты
 echo  [0]  Выход
 echo  ================================================================
 echo.
+echo.
 set /p opcao= Команда: 
 
-if /i "%opcao%"=="1" goto reiniciar
+if /i "%opcao%"=="1" goto onec
 if /i "%opcao%"=="2" goto flushdns
 if /i "%opcao%"=="3" goto ipall
 if /i "%opcao%"=="4" goto correcao_impressao
@@ -52,7 +52,7 @@ if /i "%opcao%"=="11" goto diagnostico
 if /i "%opcao%"=="12" goto energia
 if /i "%opcao%"=="13" goto desativarapps
 if /i "%opcao%"=="14" goto auditoria
-if /i "%opcao%"=="15" goto onec
+if /i "%opcao%"=="R" goto reiniciar
 if /i "%opcao%"=="S" goto configuracoes
 if /i "%opcao%"=="0" goto fim
 
@@ -567,6 +567,9 @@ echo  [2] Глубокая очистка кэша (ОСТОРОЖНО!!!)
 echo       - Удаляет локальный и роуминговый кэш 1Cv8/1Cv82
 echo         (будут затронуты настройки рабочего места и привязка оборудования)
 echo.
+echo  [3] Очистка серверного кэша 1С
+echo       - Остановка агента, удаление snccntx* в srvinfo\reg_1541 и запуск агента
+echo.
 echo  [0] Назад в главное меню
 echo  ==================================
 echo.
@@ -574,6 +577,7 @@ set /p escolha1C= Выберите действие:
 
 if "%escolha1C%"=="1" goto onec_cache_local
 if "%escolha1C%"=="2" goto onec_cache_deep
+if "%escolha1C%"=="3" goto onec_cache_server
 if "%escolha1C%"=="0" goto menu
 goto onec_restart
 
@@ -608,6 +612,53 @@ FOR /D %%i in ("%Users%*") do (
 echo [+] Глубокая очистка кэша 1С выполнена.
 call :log "1C: глубокая очистка кэша выполнена"
 timeout /t 5 >nul
+goto onec_restart
+
+:onec_cache_server
+echo [*] Очистка серверного кэша 1С...
+set "AGENT_SVC="
+rem Определяем имя службы по отображаемому имени (RU/EN варианты)
+for %%N in ("1C:Enterprise 8.3 Server Agent (x86-64)" "Агент сервера 1С:Предприятия 8.3 (x86-64)" "1C:Enterprise 8.3 Server Agent" "Агент сервера 1С:Предприятия 8.3") do (
+  for /f "tokens=2 delims=:" %%K in ('sc GetKeyName "%%~N" 2^>nul ^| findstr /I "SERVICE_NAME"') do (
+    set "AGENT_SVC=%%K"
+    set "AGENT_SVC=!AGENT_SVC:~1!"
+  )
+  if defined AGENT_SVC goto onec_cache_server_do
+)
+if not defined AGENT_SVC (
+  echo [!] Служба агента 1С не найдена по известным именам.
+  call :log "1C: служба агента не найдена"
+  timeout /t 2 >nul
+  goto onec_restart
+)
+:onec_cache_server_do
+rem Остановка службы агента 1С по системному имени
+net stop "!AGENT_SVC!" >nul 2>&1
+set "FOUND_SRV=0"
+if exist "%ProgramFiles%\1cv8\srvinfo" (
+  call :_onec_clean_srv "%ProgramFiles%\1cv8\srvinfo"
+  set "FOUND_SRV=1"
+)
+if defined ProgramFiles(x86) (
+  if exist "%ProgramFiles(x86)%\1cv8\srvinfo" (
+    call :_onec_clean_srv "%ProgramFiles(x86)%\1cv8\srvinfo"
+    set "FOUND_SRV=1"
+  )
+)
+if "!FOUND_SRV!"=="0" (
+  echo [!] Стандартные каталоги не найдены. Укажите путь к srvinfo (например, D:\1cv8\srvinfo):
+  set /p ONEC_SRV= Путь: 
+  if exist "!ONEC_SRV!" (
+    call :_onec_clean_srv "!ONEC_SRV!"
+  ) else (
+    echo [!] Путь не найден: !ONEC_SRV!
+  )
+)
+rem Запуск службы обратно
+net start "!AGENT_SVC!" >nul 2>&1
+echo [+] Серверный кэш 1С очищен.
+call :log "1C: серверный кэш очищен"
+timeout /t 3 >nul
 goto onec_restart
 
 :: ================== ПРОЧЕЕ ==================
@@ -865,6 +916,19 @@ goto :eof
 
 :set_users
 set "Users=%~dp1"
+goto :eof
+
+:_onec_clean_srv
+set "SRV_BASE=%~1"
+set "DELETED=0"
+for /D %%R in ("%SRV_BASE%\reg_*") do (
+  for /D %%d in ("%%~R\snccntx*") do (
+    echo Удаление: %%d
+    rd /s /q "%%d"
+    set "DELETED=1"
+  )
+)
+if "!DELETED!"=="0" echo [i] Не найдено каталогов snccntx* в "!SRV_BASE!"
 goto :eof
 
 :log
